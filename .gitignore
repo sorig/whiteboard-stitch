@@ -5,3 +5,14 @@ __pycache__
 *.pyc
 
 _library
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# uv / venv
+.venv/
+
+# Test data (user photos)
+whiteboard/

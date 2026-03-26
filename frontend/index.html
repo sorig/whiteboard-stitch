@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whiteboard Stitch</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Whiteboard Stitch</h1>
+        <p class="subtitle">Combine multiple whiteboard photos into a single high-resolution image</p>
+    </header>
+
+    <main>
+        <!-- Upload section -->
+        <section id="upload-section">
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">+</div>
+                    <p>Drag & drop photos here</p>
+                    <p class="hint">or</p>
+                    <button id="add-photos-btn" class="btn btn-primary">Add Photos</button>
+                    <p class="hint">JPG, PNG, HEIC supported</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Photo grid -->
+        <section id="photos-section" class="hidden">
+            <div class="section-header">
+                <h2>Click a photo to select the establishing (wide-angle) shot</h2>
+                <button id="add-more-btn" class="btn btn-small">+ Add More</button>
+            </div>
+            <div id="photo-grid" class="photo-grid"></div>
+            <p id="selection-info" class="selection-info"></p>
+        </section>
+
+        <!-- Settings panel -->
+        <section id="settings-section" class="hidden">
+            <details>
+                <summary>Settings</summary>
+                <div class="settings-grid">
+                    <label>
+                        Partition method
+                        <select id="partition-method">
+                            <option value="stacked" selected>Stacked</option>
+                            <option value="voronoi">Voronoi</option>
+                        </select>
+                    </label>
+                    <label>
+                        Canvas scale
+                        <input type="range" id="canvas-scale" min="1" max="4" step="0.5" value="2">
+                        <span id="canvas-scale-val">2.0</span>
+                    </label>
+                    <label>
+                        Detail transfer radius
+                        <input type="range" id="detail-radius" min="1" max="10" step="1" value="3">
+                        <span id="detail-radius-val">3</span>
+                    </label>
+                    <label>
+                        Edge blend radius
+                        <input type="range" id="edge-radius" min="1" max="20" step="1" value="5">
+                        <span id="edge-radius-val">5</span>
+                    </label>
+                    <label>
+                        Output format
+                        <select id="output-format">
+                            <option value="jpeg" selected>JPEG</option>
+                            <option value="png">PNG</option>
+                            <option value="webp">WebP</option>
+                        </select>
+                    </label>
+                    <label id="quality-label">
+                        Output quality
+                        <input type="range" id="output-quality" min="50" max="100" step="5" value="85">
+                        <span id="output-quality-val">85</span>
+                    </label>
+                </div>
+            </details>
+        </section>
+
+        <!-- Stitch button -->
+        <section id="stitch-section" class="hidden">
+            <button id="stitch-btn" class="btn btn-primary btn-large">Stitch</button>
+        </section>
+
+        <!-- Progress -->
+        <section id="progress-section" class="hidden">
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <p id="progress-text" class="progress-text">Starting...</p>
+            </div>
+        </section>
+
+        <!-- Results -->
+        <section id="result-section" class="hidden">
+            <h2>Result</h2>
+            <img id="result-image" class="result-image" alt="Stitched result">
+            <p id="result-size" class="result-size"></p>
+            <div class="result-actions">
+                <button id="save-btn" class="btn btn-primary">Save As...</button>
+            </div>
+            <details class="diagnostics">
+                <summary>Diagnostic images</summary>
+                <div class="diagnostics-grid">
+                    <div>
+                        <p class="caption">Homography boundaries</p>
+                        <img id="diagnostics-homographies" alt="Homographies">
+                    </div>
+                    <div>
+                        <p class="caption">Mask regions</p>
+                        <img id="diagnostics-masks" alt="Masks">
+                    </div>
+                </div>
+            </details>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

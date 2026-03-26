@@ -6,9 +6,9 @@ import hashlib
 import sys
 import deepzoom
 
-from library import Library
+from library import Library, default_cache_dir
 
-_library = Library('_library')
+_library = Library(default_cache_dir('deepzoom'))
 
 
 def subdirs(dir):

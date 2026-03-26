@@ -5,10 +5,10 @@ import cv2
 import numpy as np
 
 from spimage import Image, ImagePoint, ImageFunction, corners
-from library import Library
+from library import Library, default_cache_dir
 
 
-_library = Library('_library')
+_library = Library(default_cache_dir('features'))
 
 
 _DMatch = namedtuple('_DMatch', ['queryIdx', 'trainIdx', 'imgIdx', 'distance'])

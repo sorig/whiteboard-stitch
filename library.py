@@ -5,6 +5,23 @@ import tempfile
 import pickle
 
 
+def default_cache_dir(name="_library"):
+    """Return a writable cache directory for the library.
+    Uses ~/Library/Caches on macOS, XDG_CACHE_HOME on Linux, LOCALAPPDATA on Windows."""
+    import platform
+    system = platform.system()
+    if system == "Darwin":
+        base = os.path.join(os.path.expanduser("~"), "Library", "Caches", "whiteboard-stitch")
+    elif system == "Windows":
+        base = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "whiteboard-stitch", "cache")
+    else:
+        xdg = os.environ.get("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache"))
+        base = os.path.join(xdg, "whiteboard-stitch")
+    path = os.path.join(base, name)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 # TODO: Right now, Libraries don't provide any sort of locking. That means that,
 # if two users request the same nonexistent resource at around the same time,
 # they may both end up computing it. Bummer.
