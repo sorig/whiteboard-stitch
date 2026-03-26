@@ -3,7 +3,7 @@ import shutil
 import json
 import hashlib
 
-from clint.arguments import Args
+import sys
 import deepzoom
 
 from library import Library
@@ -34,10 +34,8 @@ def cached_deepzoom(image_path, destination):
 
 
 def main():
-    args = Args()
-
-    input_path = os.path.realpath(args.get(0))
-    output_path = os.path.realpath(args.get(1))
+    input_path = os.path.realpath(sys.argv[1])
+    output_path = os.path.realpath(sys.argv[2])
 
     image_names = ['homographies', 'masks', 'stitched']
 
@@ -64,7 +62,7 @@ def main():
 
     # Write the deepzooms
     num_deepzooms_written = 0
-    for whiteboard_name, stitchings in whiteboards.iteritems():
+    for whiteboard_name, stitchings in whiteboards.items():
         input_whiteboard_path = os.path.join(input_path, whiteboard_name)
         output_whiteboard_path = os.path.join(output_path, whiteboard_name)
         os.mkdir(output_whiteboard_path)
@@ -73,7 +71,7 @@ def main():
             output_stitching_path = os.path.join(output_whiteboard_path, stitching_name)
             os.mkdir(output_stitching_path)
             for image_name in image_names:
-                print (num_deepzooms_written + 1), '/', len(image_names) * num_stitchings
+                print((num_deepzooms_written + 1), '/', len(image_names) * num_stitchings)
                 cached_deepzoom(
                     os.path.join(input_stitching_path, image_name + '.png'),
                     os.path.join(output_stitching_path, image_name)

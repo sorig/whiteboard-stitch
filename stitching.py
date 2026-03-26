@@ -2,16 +2,14 @@ import multiprocessing.dummy
 from itertools import repeat
 
 import numpy as np
-from numba import jit
 import cv2
 
 from spimage import Image, operate, composite, blend_subimages, sum_subimages
 from sphomography import find_features, find_homography, apply_homography, apply_homography_tight
 from spvoronoi import voronoi, clip
-from profile import profile
+from spprofile import profile
 
 
-@jit
 def stable_divide(num, denom):
     return (num + 4.) / (denom + 4)
 
@@ -53,7 +51,7 @@ class StitchingJob:
 
     def find_homographies(self, downsample_scale=0.5, num_threads=None):
         with profile():
-            print 'find_homographies'
+            print('find_homographies')
             # This uses a thread pool (a dummy multiprocessing pool) to pipeline the
             # OpenCV work and take better advantage of multicore machines.
             pool = multiprocessing.dummy.Pool(processes=num_threads)
@@ -68,7 +66,7 @@ class StitchingJob:
             self.c_homs = pool.map(lambda c_features_result:
                 find_homography(c_features_result.get(), self.e_features),
                 c_features_results)
-            print self.c_homs
+            print(self.c_homs)
             self.c_features = [
                 c_features_result.get()
                 for c_features_result in c_features_results]
@@ -89,11 +87,11 @@ class StitchingJob:
             for close, area in zip(self.closes, self.areas)
         ]
         self.canvas_scale = min(max(scales), 3)  # TODO: override the max of 3?
-        print 'canvas scale is %f (from %s)' % (self.canvas_scale, str(scales))
+        print('canvas scale is %f (from %s)' % (self.canvas_scale, str(scales)))
 
     def generate_masks_voronoi(self):
         with profile():
-            print 'generate_masks_voronoi'
+            print('generate_masks_voronoi')
 
             centers = [c_hom(close.center()) for c_hom, close in zip(self.c_homs, self.closes)]
             self.c_voronoi_facets = voronoi(
@@ -106,7 +104,7 @@ class StitchingJob:
             )
             homography_masks = [
                 mask_template.fill_poly(
-                    clip(map(c_hom, close.corners()), mask_template.corners()),
+                    clip(list(map(c_hom, close.corners())), mask_template.corners()),
                     color=1).erode(3)
                 for c_hom, close in zip(self.c_homs, self.closes)
             ]
@@ -119,7 +117,7 @@ class StitchingJob:
 
     def generate_masks_stacked(self):
         with profile():
-            print 'generate_masks_stacked'
+            print('generate_masks_stacked')
 
             self.calculate_areas()
             area_order = sorted(range(len(self.areas)), key=lambda i: self.areas[i])
@@ -133,7 +131,7 @@ class StitchingJob:
             self.c_masks = [None] * len(self.closes)
             for i in area_order:
                 c_hom, close = self.c_homs[i], self.closes[i]
-                homography_boundary = map(c_hom, close.corners())
+                homography_boundary = list(map(c_hom, close.corners()))
                 clipped_homography_boundary = clip(homography_boundary, mask_template.corners())
                 c_mask = (
                     mask_template
@@ -147,7 +145,7 @@ class StitchingJob:
 
     def simple_stitch(self):
         with profile():
-            print 'simple_stitch'
+            print('simple_stitch')
 
             canvas = self.establishing.resize(scale=self.canvas_scale)
 
@@ -155,7 +153,7 @@ class StitchingJob:
                 close, c_hom = inputs
                 foreground, homography_mask = apply_homography(
                     close, c_hom, canvas.system, canvas.dims)
-                print 'processed'
+                print('processed')
                 return foreground
 
             pool = multiprocessing.dummy.Pool()
@@ -171,7 +169,7 @@ class StitchingJob:
     def detail_transfer_stitch_pt_1(self, detail_transfer_blur_op,
             edge_blend_radius):
         with profile():
-            print 'detail_transfer_stitch_pt_1'
+            print('detail_transfer_stitch_pt_1')
 
             canvas = (
                 self.establishing
@@ -182,11 +180,11 @@ class StitchingJob:
             canvas_blurred = detail_transfer_blur_op(canvas.astype(np.float32))
             # TODO: not being used
             # pool = multiprocessing.dummy.Pool()
-            self.detail_transfer_stitch_outputs = map(
+            self.detail_transfer_stitch_outputs = list(map(
                 self._detail_transfer_stitch_step,
                 zip(repeat((canvas, canvas_blurred, detail_transfer_blur_op, edge_blend_radius)),
-                    self.closes, self.c_homs, self.c_masks))
-            print 'all details are transferred'
+                    self.closes, self.c_homs, self.c_masks)))
+            print('all details are transferred')
 
     def _detail_transfer_stitch_step(self, inputs):
         ((canvas, canvas_blurred, detail_transfer_blur_op, edge_blend_radius),
@@ -203,13 +201,13 @@ class StitchingJob:
                                       foreground,
                                       homography_mask, detail_transfer_blur_op)
 
-        print 'processed'
+        print('processed')
         return (transferred, full_mask, full_mask_blurred)
 
     def detail_transfer_stitch_pt_2(self, detail_transfer_blur_op,
                                     edge_blend_radius):
         with profile():
-            print 'detail_transfer_stitch_pt_2'
+            print('detail_transfer_stitch_pt_2')
 
             canvas = (
                 self.establishing
@@ -218,17 +216,17 @@ class StitchingJob:
                 .resize(scale=self.canvas_scale)
             )
             images, full_masks, full_masks_blurred = zip(*self.detail_transfer_stitch_outputs)
-            print 'computing outside mask'
-            print 'step 1'
+            print('computing outside mask')
+            print('step 1')
             outside_mask_blurred = sum_subimages(full_masks, canvas.system, canvas.dims)
-            print 'step 2'
+            print('step 2')
             outside_mask_blurred = outside_mask_blurred.pipe(lambda x: (x == 0).astype(float))
-            print 'step 3'
+            print('step 3')
             outside_mask_blurred = outside_mask_blurred.blur(edge_blend_radius)
-            print outside_mask_blurred.array.shape
-            print full_masks_blurred[0].array.shape
+            print(outside_mask_blurred.array.shape)
+            print(full_masks_blurred[0].array.shape)
             del full_masks  # to save some memory
-            print 'blending'
+            print('blending')
             self.detail_transfer_stitch_output = blend_subimages(
                 (canvas,) + images,
                 (outside_mask_blurred,) + full_masks_blurred,
@@ -255,7 +253,7 @@ class StitchingJob:
 
     def draw_homography_boundaries_onto(self, canvas, color=(0, 255, 0), width=10):
         for c, h in zip(self.closes, self.c_homs):
-            canvas.draw_polyline(map(h, c.corners()), color=color, width=width, inplace=True)
+            canvas.draw_polyline(list(map(h, c.corners())), color=color, width=width, inplace=True)
         return canvas
 
     def draw_voronoi_diagram_onto(self, canvas, color=(0, 255, 0), width=10):

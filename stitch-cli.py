@@ -2,18 +2,16 @@ import os
 import glob
 import sys
 
-from clint.arguments import Args
+import sys
 import yaml
 
 import stitching
 import spimage
 
 if __name__ == "__main__":
-    args = Args()
+    config_path_rel = sys.argv[1]
 
-    config_path_rel = args.get(0)
-
-    config = yaml.load(open(config_path_rel))
+    config = yaml.load(open(config_path_rel), Loader=yaml.SafeLoader)
 
     c_files = config['files']
     c_feature_detection = config['feature_detection']
@@ -23,7 +21,7 @@ if __name__ == "__main__":
 
     establishing = spimage.Image.from_file(os.path.join(config_dir, c_files['establishing']))
     # TODO: allow arrays of images rather than just globs
-    closes = map(spimage.Image.from_file, glob.glob(os.path.join(config_dir, c_files['closes'])))
+    closes = list(map(spimage.Image.from_file, glob.glob(os.path.join(config_dir, c_files['closes']))))
 
     output_dir = os.path.join(
         config_dir,
@@ -61,7 +59,7 @@ if __name__ == "__main__":
     job.draw_masks_onto(canvas)
     canvas.save(os.path.join(output_dir, 'masks.png'))
 
-    if '-n' in args.flags:
+    if '-n' in sys.argv:
         # Don't actually stitch it.
         sys.exit(0)
 
@@ -84,6 +82,6 @@ if __name__ == "__main__":
     job.detail_transfer_stitch_pt_1(**c_stitching)
     job.detail_transfer_stitch_pt_2(**c_stitching)
 
-    print 'saving'
+    print('saving')
     job.detail_transfer_stitch_output.save(os.path.join(output_dir, 'stitched.png'))
-    print 'done'
+    print('done')

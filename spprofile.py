@@ -11,7 +11,7 @@ def profile(filename=None):
         pr.enable()
     now = time()
     yield
-    print (time() - now), 'seconds'
+    print((time() - now), 'seconds')
     sys.stdout.flush()
     if filename:
         pr.disable()

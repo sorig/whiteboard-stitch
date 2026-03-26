@@ -1,0 +1,15 @@
+[project]
+name = "whiteboard-stitch"
+version = "0.1.0"
+description = "Seamlessly stitch multiple whiteboard/document photos into a single high-resolution composite"
+requires-python = ">=3.13"
+dependencies = [
+    "imutils>=0.5.4",
+    "numpy>=2.4.3",
+    "opencv-python>=4.13.0.92",
+    "pillow>=12.1.1",
+    "pillow-heif>=0.21.0",
+    "pyclipper>=1.4.0",
+    "pyyaml>=6.0.3",
+    "streamlit>=1.45.0",
+]

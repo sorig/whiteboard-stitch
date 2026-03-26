@@ -2,7 +2,7 @@ import os
 import errno
 import shutil
 import tempfile
-import cPickle as pickle
+import pickle
 
 
 # TODO: Right now, Libraries don't provide any sort of locking. That means that,

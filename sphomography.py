@@ -49,8 +49,8 @@ def find_features(image):
     image_hash = hashlib.sha1(image.array).hexdigest()
 
     def calc():
-        print 'Features not in cache; computing.'
-        detector = cv2.xfeatures2d.SIFT_create()
+        print('Features not in cache; computing.')
+        detector = cv2.SIFT_create()
         kps, descriptors = detector.detectAndCompute(image.array, None)
         pts = [kp.pt for kp in kps]
         return (pts, descriptors)
@@ -71,7 +71,7 @@ def find_homography(features1, features2, ratio=0.75, reproj_thresh=4.0, min_mat
     descriptors_hash = descriptors_hasher.hexdigest()
 
     def calc():
-        print 'Matches not in cache; computing.'
+        print('Matches not in cache; computing.')
         matcher = cv2.DescriptorMatcher_create("BruteForce")
         matcher_output = matcher.knnMatch(descriptors1, descriptors2, 2)
         return [
@@ -114,7 +114,7 @@ def find_homography(features1, features2, ratio=0.75, reproj_thresh=4.0, min_mat
                           inlier_matches=inlier_matches)
 
     # otherwise, no homograpy could be computed
-    print 'HOMOGRAPHY NOT FOUND'
+    print('HOMOGRAPHY NOT FOUND')
     raise Exception('could not find homography!')
 
 

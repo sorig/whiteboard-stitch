@@ -42,15 +42,11 @@ import os
 import PIL.Image
 import shutil
 
-try:
-    import cStringIO
-    StringIO = cStringIO
-except ImportError:
-    import StringIO
+import io
 
 import sys
 import time
-import urllib
+import urllib.request
 import warnings
 import xml.dom.minidom
 
@@ -59,7 +55,7 @@ from collections import deque
 
 NS_DEEPZOOM = 'http://schemas.microsoft.com/deepzoom/2008'
 
-DEFAULT_RESIZE_FILTER = PIL.Image.ANTIALIAS
+DEFAULT_RESIZE_FILTER = PIL.Image.LANCZOS
 DEFAULT_IMAGE_FORMAT = 'jpg'
 
 RESIZE_FILTERS = {
@@ -67,7 +63,7 @@ RESIZE_FILTERS = {
     'bilinear': PIL.Image.BILINEAR,
     'bicubic': PIL.Image.BICUBIC,
     'nearest': PIL.Image.NEAREST,
-    'antialias': PIL.Image.ANTIALIAS,
+    'antialias': PIL.Image.LANCZOS,
     }
 
 IMAGE_FORMATS = {
@@ -99,7 +95,7 @@ class DeepZoomImageDescriptor(object):
 
     def save(self, destination):
         """Save descriptor file."""
-        file = open(destination, 'w')
+        file = open(destination, 'wb')
         doc = xml.dom.minidom.Document()
         image = doc.createElementNS(NS_DEEPZOOM, 'Image')
         image.setAttribute('xmlns', NS_DEEPZOOM)
@@ -239,7 +235,7 @@ class DeepZoomCollection(object):
             items.appendChild(i)
             self._append_image(item.source, item.id)
         collection.setAttribute('NextItemId', str(self.next_item_id))
-        with open(self.source, 'w') as f:
+        with open(self.source, 'wb') as f:
             if pretty_print_xml:
                 xml = self.doc.toprettyxml(encoding='UTF-8')
             else:
@@ -250,7 +246,7 @@ class DeepZoomCollection(object):
         descriptor = DeepZoomImageDescriptor()
         descriptor.open(path)
         files_path = _get_or_create_path(_get_files_path(self.source))
-        for level in reversed(xrange(self.max_level + 1)):
+        for level in reversed(range(self.max_level + 1)):
             level_path = _get_or_create_path('%s/%s'%(files_path, level))
             level_size = 2**level
             images_per_tile = int(math.floor(self.tile_size / level_size))
@@ -286,13 +282,13 @@ class DeepZoomCollection(object):
                     # have wrong dimensions (they are too large)
                     if w != e_w or h != e_h:
                         # Resize incorrect tile to correct size
-                        source_image = source_image.resize((e_w, e_h), PIL.Image.ANTIALIAS)
+                        source_image = source_image.resize((e_w, e_h), PIL.Image.LANCZOS)
                         # Store new dimensions
                         w, h = e_w, e_h
                 else:
                     w = int(math.ceil(w * 0.5))
                     h = int(math.ceil(h * 0.5))
-                    source_image.thumbnail((w, h), PIL.Image.ANTIALIAS)
+                    source_image.thumbnail((w, h), PIL.Image.LANCZOS)
             column, row = self.get_position(i)
             x = (column % images_per_tile) * level_size
             y = (row % images_per_tile) * level_size
@@ -303,7 +299,7 @@ class DeepZoomCollection(object):
         """Returns position (column, row) from given Z-order (Morton number.)"""
         column = 0
         row = 0
-        for i in xrange(0, 32, 2):
+        for i in range(0, 32, 2):
             offset = i / 2
             # column
             column_offset = i
@@ -320,7 +316,7 @@ class DeepZoomCollection(object):
     def get_z_order(self, column, row):
         """Returns the Z-order (Morton number) from given position."""
         z_order = 0
-        for i in xrange(32):
+        for i in range(32):
             z_order |= (column & 1 << i) << i | (row & 1 << i) << (i + 1)
         return z_order
 
@@ -369,19 +365,19 @@ class ImageCreator(object):
         if self.descriptor.width == width and self.descriptor.height == height:
             return self.image
         if (self.resize_filter is None) or (self.resize_filter not in RESIZE_FILTERS):
-            return self.image.resize((width, height), PIL.Image.ANTIALIAS)
+            return self.image.resize((width, height), PIL.Image.LANCZOS)
         return self.image.resize((width, height), RESIZE_FILTERS[self.resize_filter])
 
     def tiles(self, level):
         """Iterator for all tiles in the given level. Returns (column, row) of a tile."""
         columns, rows = self.descriptor.get_num_tiles(level)
-        for column in xrange(columns):
-            for row in xrange(rows):
+        for column in range(columns):
+            for row in range(rows):
                 yield (column, row)
 
     def create(self, source, destination):
         """Creates Deep Zoom image from source file and saves it to destination."""
-        self.image = PIL.Image.open(safe_open(source))
+        self.image = PIL.Image.open(source)
         width, height = self.image.size
         self.descriptor = DeepZoomImageDescriptor(width=width,
                                                   height=height,
@@ -390,7 +386,7 @@ class ImageCreator(object):
                                                   tile_format=self.tile_format)
         # Create tiles
         image_files = _get_or_create_path(_get_files_path(destination))
-        for level in xrange(self.descriptor.num_levels):
+        for level in range(self.descriptor.num_levels):
             level_dir = _get_or_create_path(os.path.join(image_files, str(level)))
             level_image = self.get_image(level)
             for (column, row) in self.tiles(level):
@@ -447,7 +443,7 @@ def retry(attempts, backoff=2):
     def deco_retry(f):
         def f_retry(*args, **kwargs):
             last_exception = None
-            for _ in xrange(attempts):
+            for _ in range(attempts):
                 try:
                     return f(*args, **kwargs)
                 except Exception as exception:
@@ -479,7 +475,7 @@ def _remove(path):
 
 @retry(6)
 def safe_open(path):
-    return StringIO.StringIO(urllib.urlopen(path).read())
+    return io.BytesIO(urllib.request.urlopen(path).read())
 
 ################################################################################
 

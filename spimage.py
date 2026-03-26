@@ -5,20 +5,17 @@ import datetime
 import cv2
 import imutils
 import numpy as np
-from numba import jit
-
-from IPython.core.display import display_png, display_html
-
 
 temp_images_dir = 'temp-images'
 
 
 def show_image(arr):
+    from IPython.core.display import display_png, display_html
     resized = imutils.resize(arr, width=800)
-    png_to_show = cv2.imencode('.png', resized)[1].tostring()
+    png_to_show = cv2.imencode('.png', resized)[1].tobytes()
     display_png(png_to_show, raw=True)
 
-    png_to_save = cv2.imencode('.png', arr)[1].tostring()
+    png_to_save = cv2.imencode('.png', arr)[1].tobytes()
     try:
         os.makedirs(temp_images_dir)
     except OSError as exception:
@@ -26,7 +23,7 @@ def show_image(arr):
             raise
     file_name = datetime.datetime.now().isoformat().replace(':', '_') + '.png'
     file_path = os.path.join(temp_images_dir, file_name)
-    with open(file_path, 'w') as f:
+    with open(file_path, 'wb') as f:
         f.write(png_to_save)
 
     url = 'http://localhost:8888/files/%s' % file_path
@@ -154,7 +151,16 @@ class Image:
 
     @staticmethod
     def from_file(name):
-        array = cv2.imread(name)
+        if name.lower().endswith(('.heic', '.heif')):
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+            from PIL import Image as PILImage
+            pil_img = PILImage.open(name).convert('RGB')
+            array = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+        else:
+            array = cv2.imread(name)
+        if array is None:
+            raise ValueError(f"Could not read image: {name}")
         label = os.path.abspath(name)
         return Image.from_array(array, label)
 
@@ -290,7 +296,7 @@ def find_white(array):
     pixels = array.reshape((-1, 3))
     grey = cv2.cvtColor(array, cv2.COLOR_BGR2GRAY).reshape(-1)
     gsort = grey.argsort()
-    top_5_percent = gsort[-len(gsort) / 20:]
+    top_5_percent = gsort[-len(gsort) // 20:]
     return pixels[top_5_percent].mean(axis=0)
 
 
@@ -320,9 +326,9 @@ def abut(image1, image2, embeddings=False):
     output_image = Image.from_array(output_array)
     if embeddings:
         embedding_left = ImageFunction(image1.system, output_image.system,
-                                       lambda (x, y): (x, y))
+                                       lambda p: (p[0], p[1]))
         embedding_right = ImageFunction(image2.system, output_image.system,
-                                        lambda (x, y): (x + w1, y))
+                                        lambda p: (p[0] + w1, p[1]))
         return (output_image, embedding_left, embedding_right)
     else:
         return output_image
@@ -337,7 +343,6 @@ def composite(background_image, foreground_image, mask, inplace=False):
     return background_copy
 
 
-@jit(nopython=True, cache=True)
 def sum_arrs_with_offsets(shape, arrs, offsets):
     base = np.zeros(shape)
     for arr, offset in zip(arrs, offsets):
@@ -345,7 +350,6 @@ def sum_arrs_with_offsets(shape, arrs, offsets):
     return base
 
 
-@jit(cache=True)
 def blend_arrs_with_offsets(arr_shape, arrs, masks, offsets):
     '''Must receive no NaNs! That's what masks are for.'''
     mask_sum = sum_arrs_with_offsets(arr_shape[:2], masks, offsets)
@@ -361,11 +365,10 @@ def blend_arrs_with_offsets(arr_shape, arrs, masks, offsets):
     return base
 
 
-@jit(cache=True)
 def nan_to_zero(arr, inplace=False):
-    '''numpy's "nan_to_num" is crazy-slow, and doesn't have an inplace option.'''
+    '''Replace NaN values with 0.'''
     copy = arr if inplace else arr.copy()
-    copy[np.isnan(copy)] = 0
+    np.nan_to_num(copy, copy=False, nan=0.0)
     return copy
 
 
